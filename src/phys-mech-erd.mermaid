@@ -1,0 +1,98 @@
+erDiagram
+    Users ||--o{ Mechanisms : creates
+    Users ||--o{ Likes : gives
+    Users ||--o{ Comments : writes
+    Users ||--o{ Downloads : performs
+    Users ||--o{ UserInterests : has
+    Users ||--o{ UserCategories : has
+    
+    Mechanisms ||--o{ Likes : receives
+    Mechanisms ||--o{ Comments : receives
+    Mechanisms ||--o{ Downloads : has
+    Mechanisms ||--o{ MechanismCategories : has
+    Mechanisms ||--o{ Views : has
+
+    Categories ||--o{ MechanismCategories : belongs_to
+    Categories ||--o{ UserCategories : belongs_to
+
+    Users {
+        uuid id PK
+        string email
+        string password_hash
+        string username
+        string display_name
+        string profile_image_url
+        text bio
+        timestamp created_at
+        timestamp updated_at
+        boolean is_active
+    }
+
+    Mechanisms {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text description
+        string file_url
+        string thumbnail_url
+        int duration
+        timestamp created_at
+        timestamp updated_at
+        boolean is_published
+    }
+
+    Categories {
+        uuid id PK
+        string name
+        string description
+        timestamp created_at
+    }
+
+    MechanismCategories {
+        uuid mechanism_id FK
+        uuid category_id FK
+    }
+
+    UserCategories {
+        uuid user_id FK
+        uuid category_id FK
+    }
+
+    UserInterests {
+        uuid id PK
+        uuid user_id FK
+        string interest_name
+        timestamp created_at
+    }
+
+    Likes {
+        uuid id PK
+        uuid user_id FK
+        uuid mechanism_id FK
+        timestamp created_at
+    }
+
+    Comments {
+        uuid id PK
+        uuid user_id FK
+        uuid mechanism_id FK
+        text content
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    Downloads {
+        uuid id PK
+        uuid user_id FK
+        uuid mechanism_id FK
+        timestamp created_at
+        string ip_address
+    }
+
+    Views {
+        uuid id PK
+        uuid mechanism_id FK
+        string session_id
+        timestamp created_at
+        string ip_address
+    }
