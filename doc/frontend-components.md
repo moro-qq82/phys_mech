@@ -26,6 +26,7 @@ interface PlatformState {
   liked: boolean;
   currentPage: number;
   selectedCategories: number[];
+  selectedReliabilityLevels: ReliabilityLevel[];
   sortBy: 'newest' | 'oldest' | 'popular' | 'views' | 'comments';
   searchQuery: string;
 }
@@ -40,7 +41,24 @@ interface Mechanism {
   views: number;
   createdAt: string;
   categories: number[];
+  reliabilityLevel: ReliabilityLevel;
 }
+
+// 信頼性レベルの定義
+type ReliabilityLevel = 
+  | '妄想モデル'
+  | '実験により一部支持'
+  | '社内複数人が支持'
+  | '顧客含めて定番認識化'
+  | '教科書に記載';
+
+const RELIABILITY_LEVELS: ReliabilityLevel[] = [
+  '妄想モデル',
+  '実験により一部支持',
+  '社内複数人が支持',
+  '顧客含めて定番認識化',
+  '教科書に記載'
+];
 ```
 
 ### 2.2 UserProfile
@@ -100,31 +118,105 @@ const MechanismCard: React.FC<MechanismCardProps> = ({
   onLike,
   liked
 }) => {
+  const reliabilityColorMap = {
+    '妄想モデル': 'bg-gray-100 text-gray-600',
+    '実験により一部支持': 'bg-blue-100 text-blue-600',
+    '社内複数人が支持': 'bg-green-100 text-green-600',
+    '顧客含めて定番認識化': 'bg-purple-100 text-purple-600',
+    '教科書に記載': 'bg-yellow-100 text-yellow-600'
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      {/* 既存のカード実装 */}
+      <div className="relative">
+        <img 
+          src={mechanism.thumbnail_url} 
+          alt={mechanism.title}
+          className="w-full h-48 object-cover"
+        />
+        <span className={`absolute top-2 right-2 px-2 py-1 rounded-md text-sm ${
+          reliabilityColorMap[mechanism.reliabilityLevel]
+        }`}>
+          {mechanism.reliabilityLevel}
+        </span>
+      </div>
+      
+      <div className="p-4">
+        <h3 className="text-lg font-semibold mb-2">{mechanism.title}</h3>
+        <p className="text-gray-600 text-sm mb-4">{mechanism.description}</p>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={onLike}
+              className={`flex items-center space-x-1 ${liked ? 'text-red-500' : 'text-gray-500'}`}
+            >
+              <Heart className="h-5 w-5" fill={liked ? 'currentColor' : 'none'} />
+              <span>{mechanism.likes}</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 ```
 
-### 3.3 カテゴリーフィルター
+### 3.3 フィルターコンポーネント
 ```typescript
-// components/CategoryFilter.tsx
-interface CategoryFilterProps {
+// components/Filters.tsx
+interface FiltersProps {
   categories: Category[];
   selectedCategories: number[];
   onToggleCategory: (categoryId: number) => void;
+  reliabilityLevels: ReliabilityLevel[];
+  selectedReliabilityLevels: ReliabilityLevel[];
+  onToggleReliability: (level: ReliabilityLevel) => void;
 }
 
-const CategoryFilter: React.FC<CategoryFilterProps> = ({
+const Filters: React.FC<FiltersProps> = ({
   categories,
   selectedCategories,
-  onToggleCategory
+  onToggleCategory,
+  reliabilityLevels,
+  selectedReliabilityLevels,
+  onToggleReliability
 }) => {
   return (
-    <div className="flex flex-wrap gap-2">
-      {/* 既存のフィルター実装 */}
+    <div className="space-y-4">
+      {/* カテゴリーフィルター */}
+      <div className="flex flex-wrap gap-2">
+        {categories.map(category => (
+          <button
+            key={category.id}
+            onClick={() => onToggleCategory(category.id)}
+            className={`px-4 py-2 rounded-full text-sm ${
+              selectedCategories.includes(category.id)
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {category.name}
+          </button>
+        ))}
+      </div>
+
+      {/* 信頼性レベルフィルター */}
+      <div className="flex flex-wrap gap-2">
+        {reliabilityLevels.map(level => (
+          <button
+            key={level}
+            onClick={() => onToggleReliability(level)}
+            className={`px-4 py-2 rounded-full text-sm ${
+              selectedReliabilityLevels.includes(level)
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
@@ -153,28 +245,6 @@ const StatsChart: React.FC<StatsChartProps> = ({ data }) => {
 };
 ```
 
-### 3.5 インタレストタグ
-```typescript
-// components/InterestTags.tsx
-interface InterestTagsProps {
-  interests: string[];
-  onRemove: (interest: string) => void;
-  onAdd: (interest: string) => void;
-}
-
-const InterestTags: React.FC<InterestTagsProps> = ({
-  interests,
-  onRemove,
-  onAdd
-}) => {
-  return (
-    <div>
-      {/* 既存のタグ実装 */}
-    </div>
-  );
-};
-```
-
 ## 4. 状態管理パターン
 
 ### 4.1 ローカル状態
@@ -183,13 +253,9 @@ const InterestTags: React.FC<InterestTagsProps> = ({
 const [liked, setLiked] = useState(false);
 const [currentPage, setCurrentPage] = useState(1);
 const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+const [selectedReliabilityLevels, setSelectedReliabilityLevels] = useState<ReliabilityLevel[]>([]);
 const [sortBy, setSortBy] = useState<SortOption>('newest');
 const [searchQuery, setSearchQuery] = useState('');
-
-// プロフィールページの状態
-const [interests, setInterests] = useState<string[]>([]);
-const [newInterest, setNewInterest] = useState('');
-const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
 ```
 
 ### 4.2 メモ化パターン
@@ -198,10 +264,17 @@ const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
 const sortedAndFilteredMechanisms = useMemo(() => {
   let result = [...mechanisms];
   
-  // フィルタリングロジック
+  // カテゴリーフィルタリング
   if (selectedCategories.length > 0) {
     result = result.filter(mechanism => 
       mechanism.categories.some(cat => selectedCategories.includes(cat))
+    );
+  }
+
+  // 信頼性レベルフィルタリング
+  if (selectedReliabilityLevels.length > 0) {
+    result = result.filter(mechanism =>
+      selectedReliabilityLevels.includes(mechanism.reliabilityLevel)
     );
   }
 
@@ -223,7 +296,7 @@ const sortedAndFilteredMechanisms = useMemo(() => {
   }
 
   return result;
-}, [mechanisms, selectedCategories, sortBy, searchQuery]);
+}, [mechanisms, selectedCategories, selectedReliabilityLevels, sortBy, searchQuery]);
 ```
 
 ## 5. スタイリング規約
@@ -248,80 +321,36 @@ const commonStyles = {
   
   // グリッド
   grid: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6',
+
+  // 信頼性レベルバッジ
+  reliabilityBadge: {
+    '妄想モデル': 'bg-gray-100 text-gray-600',
+    '実験により一部支持': 'bg-blue-100 text-blue-600',
+    '社内複数人が支持': 'bg-green-100 text-green-600',
+    '顧客含めて定番認識化': 'bg-purple-100 text-purple-600',
+    '教科書に記載': 'bg-yellow-100 text-yellow-600'
+  }
 };
 ```
 
-## 6. パフォーマンス最適化
+## 6. アクセシビリティ
 
-### 6.1 ページネーション
+### 6.1 ARIA属性
 ```typescript
-const itemsPerPage = 6;
-const totalPages = Math.ceil(filteredMechanisms.length / itemsPerPage);
-const currentMechanisms = filteredMechanisms.slice(
-  (currentPage - 1) * itemsPerPage,
-  currentPage * itemsPerPage
-);
-```
-
-### 6.2 遅延読み込み
-```typescript
-// 画像の遅延読み込み
-<img 
-  src="/api/placeholder/400/300" 
-  alt="メカニズムのプレビュー" 
-  className="w-full h-48 object-cover"
-  loading="lazy"
-/>
-```
-
-## 7. エラーハンドリング
-
-### 7.1 データ取得エラー
-```typescript
-const [error, setError] = useState<Error | null>(null);
-
-if (error) {
-  return (
-    <div className="text-red-600 bg-red-100 p-4 rounded-lg">
-      <h3 className="font-bold">エラーが発生しました</h3>
-      <p>{error.message}</p>
-    </div>
-  );
-}
-```
-
-### 7.2 入力バリデーション
-```typescript
-const validateInterest = (interest: string): boolean => {
-  if (!interest.trim()) {
-    return false;
-  }
-  if (interests.includes(interest.trim())) {
-    return false;
-  }
-  return true;
-};
-```
-
-## 8. アクセシビリティ
-
-### 8.1 ARIA属性
-```typescript
-// ボタンとフォーム要素のアクセシビリティ
-<button
-  aria-label="いいねする"
-  onClick={onLike}
-  className={`flex items-center space-x-1 ${liked ? 'text-red-500' : 'text-gray-500'}`}
->
-  <Heart className="h-5 w-5" fill={liked ? 'currentColor' : 'none'} />
-  <span>{likes}</span>
-</button>
-
-<input
-  type="text"
-  aria-label="メカニズムを検索"
-  placeholder="メカニズムを検索..."
-  className="w-48 md:w-64 pl-10 pr-4 py-2 border rounded-lg"
-  value={searchQuery}
-  onChange={handleSearch}
-/>
+// 信頼性レベルフィルターのアクセシビリティ
+<div role="group" aria-label="信頼性レベルフィルター">
+  {reliabilityLevels.map(level => (
+    <button
+      key={level}
+      aria-pressed={selectedReliabilityLevels.includes(level)}
+      onClick={() => onToggleReliability(level)}
+      className={`px-4 py-2 rounded-full text-sm ${
+        selectedReliabilityLevels.includes(level)
+          ? 'bg-green-600 text-white'
+          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+      }`}
+    >
+      {level}
+    </button>
+  ))}
+</div>

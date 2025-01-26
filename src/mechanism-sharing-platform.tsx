@@ -1,13 +1,46 @@
 import React, { useState, useMemo } from 'react';
 import { Heart, MessageCircle, Download, Share2, Search, ArrowUpDown, User } from 'lucide-react';
 
-const MechanismPlatform = ({ onNavigateToProfile }) => {
+type ReliabilityLevel = 
+  | '妄想モデル'
+  | '実験により一部支持'
+  | '社内複数人が支持'
+  | '顧客含めて定番認識化'
+  | '教科書に記載';
+
+interface MechanismPlatformProps {
+  onNavigateToProfile: () => void;
+}
+
+interface Mechanism {
+  id: number;
+  title: string;
+  description: string;
+  likes: number;
+  comments: number;
+  views: number;
+  createdAt: string;
+  categories: number[];
+  reliabilityLevel: ReliabilityLevel;
+}
+
+const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfile }) => {
   // ... (state and data definitions remain the same)
   const [liked, setLiked] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [sortBy, setSortBy] = useState('newest');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+  const [selectedReliabilityLevels, setSelectedReliabilityLevels] = useState<ReliabilityLevel[]>([]);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular' | 'views' | 'comments'>('newest');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // 信頼性レベルの定義
+  const reliabilityLevels: ReliabilityLevel[] = [
+    '妄想モデル',
+    '実験により一部支持',
+    '社内複数人が支持',
+    '顧客含めて定番認識化',
+    '教科書に記載'
+  ];
 
   // Category data
   const categories = [
@@ -20,7 +53,7 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
   ];
 
   // Sample mechanism data
-  const rawMechanisms = Array(12).fill(null).map((_, index) => ({
+  const rawMechanisms: Mechanism[] = Array(12).fill(null).map((_, index) => ({
     id: index + 1,
     title: `物理メカニズム ${index + 1}`,
     description: '物理現象の可視化とシミュレーション',
@@ -29,6 +62,7 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
     views: Math.floor(Math.random() * 1000),
     createdAt: new Date(2024, 0, index + 1).toISOString(),
     categories: [Math.floor(Math.random() * 6) + 1],
+    reliabilityLevel: reliabilityLevels[Math.floor(Math.random() * reliabilityLevels.length)]
   }));
 
   // Sort options
@@ -50,6 +84,12 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
       );
     }
 
+    if (selectedReliabilityLevels.length > 0) {
+      result = result.filter(mechanism =>
+        selectedReliabilityLevels.includes(mechanism.reliabilityLevel)
+      );
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(mechanism => 
@@ -60,10 +100,10 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
 
     switch (sortBy) {
       case 'newest':
-        result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         break;
       case 'oldest':
-        result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         break;
       case 'popular':
         result.sort((a, b) => b.likes - a.likes);
@@ -89,7 +129,7 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
   const currentMechanisms = sortedAndFilteredMechanisms.slice(startIndex, endIndex);
 
   // Page change handler
-  const handlePageChange = (pageNumber) => {
+  const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -133,29 +173,54 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
 
       {/* Filters and Sort */}
       <div className="container mx-auto px-4 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-2">
-            {categories.map(category => (
-              <button
-                key={category.id}
-                onClick={() => {
-                  setSelectedCategories(prev => 
-                    prev.includes(category.id)
-                      ? prev.filter(id => id !== category.id)
-                      : [...prev, category.id]
-                  );
-                  setCurrentPage(1);
-                }}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                  selectedCategories.includes(category.id)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
-          </div>
+      <div className="flex flex-col space-y-4">
+        {/* カテゴリーフィルター */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map(category => (
+            <button
+              key={category.id}
+              onClick={() => {
+                setSelectedCategories(prev => 
+                  prev.includes(category.id)
+                    ? prev.filter(id => id !== category.id)
+                    : [...prev, category.id]
+                );
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                selectedCategories.includes(category.id)
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+
+        {/* 信頼性レベルフィルター */}
+        <div className="flex flex-wrap gap-2">
+          {reliabilityLevels.map(level => (
+            <button
+              key={level}
+              onClick={() => {
+                setSelectedReliabilityLevels(prev =>
+                  prev.includes(level)
+                    ? prev.filter(l => l !== level)
+                    : [...prev, level]
+                );
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                selectedReliabilityLevels.includes(level)
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {level}
+            </button>
+          ))}
+        </div>
           <div className="flex items-center space-x-2">
             <ArrowUpDown className="h-5 w-5 text-gray-500" />
             <select
@@ -187,8 +252,19 @@ const MechanismPlatform = ({ onNavigateToProfile }) => {
                   alt="メカニズムのプレビュー" 
                   className="w-full h-48 object-cover"
                 />
-                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-sm">
-                  00:30
+                <div className="absolute top-2 right-2 px-2 py-1 rounded-md text-sm" style={{
+                  backgroundColor: mechanism.reliabilityLevel === '妄想モデル' ? '#F3F4F6' :
+                                 mechanism.reliabilityLevel === '実験により一部支持' ? '#DBEAFE' :
+                                 mechanism.reliabilityLevel === '社内複数人が支持' ? '#D1FAE5' :
+                                 mechanism.reliabilityLevel === '顧客含めて定番認識化' ? '#F3E8FF' :
+                                 '#FEF3C7',
+                  color: mechanism.reliabilityLevel === '妄想モデル' ? '#4B5563' :
+                         mechanism.reliabilityLevel === '実験により一部支持' ? '#2563EB' :
+                         mechanism.reliabilityLevel === '社内複数人が支持' ? '#059669' :
+                         mechanism.reliabilityLevel === '顧客含めて定番認識化' ? '#7C3AED' :
+                         '#B45309'
+                }}>
+                  {mechanism.reliabilityLevel}
                 </div>
               </div>
               
