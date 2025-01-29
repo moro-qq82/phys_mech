@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Heart, MessageCircle, Download, Share2, Search, ArrowUpDown, User } from 'lucide-react';
+import { Heart, MessageCircle, Download, Share2, Search, ArrowUpDown, User, LogOut } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import LoginForm from './components/auth/LoginForm';
+import RegisterForm from './components/auth/RegisterForm';
+import CreateMechanismModal from './components/mechanism/CreateMechanismModal';
 
 type ReliabilityLevel = 
   | '妄想モデル'
@@ -11,6 +15,8 @@ type ReliabilityLevel =
 interface MechanismPlatformProps {
   onNavigateToProfile: () => void;
 }
+
+type AuthModalType = 'login' | 'register' | null;
 
 interface Mechanism {
   id: number;
@@ -25,7 +31,9 @@ interface Mechanism {
 }
 
 const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfile }) => {
-  // ... (state and data definitions remain the same)
+  const { user, logout } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState<AuthModalType>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [liked, setLiked] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
@@ -155,17 +163,46 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
                 />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg">
-                投稿する
-              </button>
-              <button 
-                onClick={onNavigateToProfile}
-                className="p-2 rounded-full hover:bg-gray-100"
-              >
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                  <User className="h-5 w-5 text-gray-600" />
-                </div>
-              </button>
+            {user ? (
+              <>
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  投稿する
+                </button>
+                <button 
+                  onClick={onNavigateToProfile}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                >
+                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-gray-600" />
+                  </div>
+                </button>
+                <button
+                  onClick={logout}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                  title="ログアウト"
+                >
+                  <LogOut className="h-5 w-5 text-gray-600" />
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setShowAuthModal('login')}
+                  className="text-blue-600 hover:text-blue-700"
+                >
+                  ログイン
+                </button>
+                <button
+                  onClick={() => setShowAuthModal('register')}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                >
+                  新規登録
+                </button>
+              </div>
+            )}
             </div>
           </div>
         </div>
@@ -226,7 +263,7 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
             <select
               value={sortBy}
               onChange={(e) => {
-                setSortBy(e.target.value);
+                setSortBy(e.target.value as 'newest' | 'oldest' | 'popular' | 'views' | 'comments');
                 setCurrentPage(1);
               }}
               className="border rounded-lg px-3 py-2 bg-white"
@@ -344,6 +381,81 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
           </div>
         )}
       </main>
+
+      {/* 認証モーダル */}
+      {showAuthModal === 'login' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4">ログイン</h2>
+            <LoginForm onSuccess={() => setShowAuthModal(null)} />
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setShowAuthModal('register')}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                アカウントをお持ちでない方はこちら
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAuthModal === 'register' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4">新規登録</h2>
+            <RegisterForm onSuccess={() => setShowAuthModal(null)} />
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setShowAuthModal('login')}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                すでにアカウントをお持ちの方はこちら
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* メカニズム投稿モーダル */}
+      <CreateMechanismModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={async (data) => {
+          try {
+            const formData = new FormData();
+            formData.append('title', data.title);
+            formData.append('description', data.description);
+            data.categories.forEach(categoryId => {
+              formData.append('categories[]', categoryId.toString());
+            });
+            formData.append('reliabilityLevel', data.reliabilityLevel);
+            if (data.file) formData.append('file', data.file);
+            if (data.thumbnail) formData.append('thumbnail', data.thumbnail);
+
+            const token = localStorage.getItem('token');
+            const response = await fetch('https://api.physmech.com/v1/mechanisms', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              body: formData
+            });
+
+            if (!response.ok) {
+              throw new Error('投稿に失敗しました');
+            }
+
+            // 投稿成功後の処理
+            // TODO: メカニズム一覧を更新する
+          } catch (err) {
+            console.error('Failed to create mechanism:', err);
+            throw err;
+          }
+        }}
+        categories={categories}
+        reliabilityLevels={reliabilityLevels}
+      />
     </div>
   );
 };
