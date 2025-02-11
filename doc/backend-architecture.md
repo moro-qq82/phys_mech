@@ -57,6 +57,33 @@ backend/
 
 ### 3.1 ドメイン層
 ```python
+# domain/category.py
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
+
+@dataclass
+class Category:
+    id: str
+    name: str
+    description: str
+    created_by: Optional[str]
+    is_system: bool
+    created_at: datetime
+    updated_at: datetime
+
+    def can_be_edited_by(self, user_id: str) -> bool:
+        if self.is_system:
+            return False
+        return self.created_by == user_id
+
+    def update(self, name: str, description: str) -> None:
+        if not name.strip():
+            raise ValueError("Category name cannot be empty")
+        self.name = name
+        self.description = description
+        self.updated_at = datetime.utcnow()
+
 # domain/mechanism.py
 from dataclasses import dataclass
 from datetime import datetime
@@ -85,6 +112,65 @@ class Mechanism:
 ```
 
 ### 3.2 リポジトリ層
+```python
+# infrastructure/repositories/category.py
+from abc import ABC, abstractmethod
+from typing import List, Optional
+from domain.category import Category
+
+class CategoryRepository(ABC):
+    @abstractmethod
+    async def find_by_id(self, id: str) -> Optional[Category]:
+        pass
+
+    @abstractmethod
+    async def find_by_name(self, name: str) -> Optional[Category]:
+        pass
+
+    @abstractmethod
+    async def save(self, category: Category) -> Category:
+        pass
+
+    @abstractmethod
+    async def find_all(
+        self,
+        include_system: bool = True,
+        created_by: Optional[str] = None
+    ) -> List[Category]:
+        pass
+
+    @abstractmethod
+    async def delete(self, id: str) -> bool:
+        pass
+
+class PostgresCategoryRepository(CategoryRepository):
+    def __init__(self, db_session):
+        self.db_session = db_session
+
+    async def find_by_id(self, id: str) -> Optional[Category]:
+        # PostgreSQLからの取得実装
+        pass
+
+    async def find_by_name(self, name: str) -> Optional[Category]:
+        # PostgreSQLからの取得実装
+        pass
+
+    async def save(self, category: Category) -> Category:
+        # PostgreSQLへの保存実装
+        pass
+
+    async def find_all(
+        self,
+        include_system: bool = True,
+        created_by: Optional[str] = None
+    ) -> List[Category]:
+        # PostgreSQLからの一覧取得実装
+        pass
+
+    async def delete(self, id: str) -> bool:
+        # PostgreSQLからの削除実装
+        pass```
+
 ```python
 # infrastructure/repositories/mechanism.py
 from abc import ABC, abstractmethod
@@ -124,6 +210,83 @@ class PostgresMechanismRepository(MechanismRepository):
 ```
 
 ### 3.3 サービス層
+```python
+# services/category.py
+from typing import List, Optional
+from domain.category import Category
+from infrastructure.repositories.category import CategoryRepository
+from core.exceptions import CategoryNotFound, UnauthorizedOperation
+
+class CategoryService:
+    def __init__(self, repository: CategoryRepository):
+        self.repository = repository
+
+    async def create_category(
+        self,
+        name: str,
+        description: str,
+        user_id: str
+    ) -> Category:
+        # 同名のカテゴリーが存在しないか確認
+        existing = await self.repository.find_by_name(name)
+        if existing:
+            raise ValueError("Category with this name already exists")
+
+        category = Category(
+            name=name,
+            description=description,
+            created_by=user_id,
+            is_system=False
+        )
+        return await self.repository.save(category)
+
+    async def update_category(
+        self,
+        category_id: str,
+        user_id: str,
+        name: str,
+        description: str
+    ) -> Category:
+        category = await self.repository.find_by_id(category_id)
+        if not category:
+            raise CategoryNotFound()
+
+        if not category.can_be_edited_by(user_id):
+            raise UnauthorizedOperation()
+
+        # 名前を変更する場合は重複チェック
+        if name != category.name:
+            existing = await self.repository.find_by_name(name)
+            if existing:
+                raise ValueError("Category with this name already exists")
+
+        category.update(name, description)
+        return await self.repository.save(category)
+
+    async def delete_category(
+        self,
+        category_id: str,
+        user_id: str
+    ) -> bool:
+        category = await self.repository.find_by_id(category_id)
+        if not category:
+            raise CategoryNotFound()
+
+        if not category.can_be_edited_by(user_id):
+            raise UnauthorizedOperation()
+
+        return await self.repository.delete(category_id)
+
+    async def get_categories(
+        self,
+        include_system: bool = True,
+        user_id: Optional[str] = None
+    ) -> List[Category]:
+        return await self.repository.find_all(
+            include_system=include_system,
+            created_by=user_id
+        )```
+
 ```python
 # services/mechanism.py
 from typing import List, Optional
@@ -172,6 +335,78 @@ class MechanismService:
 ```
 
 ### 3.4 API層
+```python
+# api/v1/categories.py
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from services.category import CategoryService
+from api.dependencies import get_current_user
+
+router = APIRouter()
+
+@router.post("/categories")
+async def create_category(
+    data: CategoryCreate,
+    current_user = Depends(get_current_user),
+    category_service: CategoryService = Depends()
+):
+    try:
+        category = await category_service.create_category(
+            name=data.name,
+            description=data.description,
+            user_id=current_user.id
+        )
+        return category
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.put("/categories/{category_id}")
+async def update_category(
+    category_id: str,
+    data: CategoryUpdate,
+    current_user = Depends(get_current_user),
+    category_service: CategoryService = Depends()
+):
+    try:
+        category = await category_service.update_category(
+            category_id=category_id,
+            user_id=current_user.id,
+            name=data.name,
+            description=data.description
+        )
+        return category
+    except (CategoryNotFound, UnauthorizedOperation) as e:
+        raise HTTPException(status_code=404 if isinstance(e, CategoryNotFound) else 403)
+
+@router.delete("/categories/{category_id}")
+async def delete_category(
+    category_id: str,
+    current_user = Depends(get_current_user),
+    category_service: CategoryService = Depends()
+):
+    try:
+        success = await category_service.delete_category(
+            category_id=category_id,
+            user_id=current_user.id
+        )
+        if not success:
+            raise HTTPException(status_code=404)
+        return {"status": "success"}
+    except UnauthorizedOperation:
+        raise HTTPException(status_code=403)
+
+@router.get("/categories")
+async def list_categories(
+    include_system: bool = True,
+    user_id: Optional[str] = None,
+    category_service: CategoryService = Depends()
+):
+    categories = await category_service.get_categories(
+        include_system=include_system,
+        user_id=user_id
+    )
+    return categories```
+
 ```python
 # api/v1/mechanisms.py
 from fastapi import APIRouter, Depends, HTTPException
@@ -306,6 +541,13 @@ def require_permissions(*permissions):
 ### 6.1 カスタム例外
 ```python
 # core/exceptions.py
+class CategoryNotFound(DomainException):
+    def __init__(self):
+        super().__init__(
+            message="Category not found",
+            code="CATEGORY_NOT_FOUND"
+        )
+
 class DomainException(Exception):
     def __init__(self, message: str, code: str):
         self.message = message

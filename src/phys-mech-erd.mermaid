@@ -46,7 +46,10 @@ erDiagram
         uuid id PK
         string name
         string description
+        uuid created_by FK
+        boolean is_system
         timestamp created_at
+        timestamp updated_at
     }
 
     MechanismCategories {

@@ -54,6 +54,18 @@
    - カラム: name
    - 理由: カテゴリー名の一意性確保、名前での検索
 
+2. created_by_idx
+   - カラム: created_by
+   - 理由: ユーザーが作成したカテゴリーの一覧取得
+
+3. system_created_at_idx
+   - カラム: (is_system, created_at)
+   - 理由: システムカテゴリーとユーザー作成カテゴリーの区別、作成日時でのソート
+
+4. user_categories_idx
+   - カラム: (created_by, is_system, created_at)
+   - 理由: ユーザーごとのカテゴリー管理、フィルタリングとソートの最適化
+
 ### MechanismCategories テーブル
 1. mechanism_id_idx
    - カラム: mechanism_id
