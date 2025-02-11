@@ -5,13 +5,6 @@ import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import CreateMechanismModal from './components/mechanism/CreateMechanismModal';
 
-type ReliabilityLevel = 
-  | '妄想モデル'
-  | '実験により一部支持'
-  | '社内複数人が支持'
-  | '顧客含めて定番認識化'
-  | '教科書に記載';
-
 interface MechanismPlatformProps {
   onNavigateToProfile: () => void;
 }
@@ -19,15 +12,18 @@ interface MechanismPlatformProps {
 type AuthModalType = 'login' | 'register' | null;
 
 interface Mechanism {
-  id: number;
+  id: string;
   title: string;
   description: string;
   likes: number;
   comments: number;
   views: number;
   createdAt: string;
-  categories: number[];
-  reliabilityLevel: ReliabilityLevel;
+  categories: string[];
+  file_url: string;
+  thumbnail_url: string;
+  duration: number;
+  is_published: boolean;
 }
 
 const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfile }) => {
@@ -36,41 +32,34 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [liked, setLiked] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
-  const [selectedReliabilityLevels, setSelectedReliabilityLevels] = useState<ReliabilityLevel[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular' | 'views' | 'comments'>('newest');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // 信頼性レベルの定義
-  const reliabilityLevels: ReliabilityLevel[] = [
-    '妄想モデル',
-    '実験により一部支持',
-    '社内複数人が支持',
-    '顧客含めて定番認識化',
-    '教科書に記載'
-  ];
-
   // Category data
   const categories = [
-    { id: 1, name: '力学' },
-    { id: 2, name: '電磁気学' },
-    { id: 3, name: '熱力学' },
-    { id: 4, name: '波動' },
-    { id: 5, name: '量子力学' },
-    { id: 6, name: '相対性理論' },
+    { id: 'mechanics', name: '力学' },
+    { id: 'em', name: '電磁気学' },
+    { id: 'thermo', name: '熱力学' },
+    { id: 'wave', name: '波動' },
+    { id: 'quantum', name: '量子力学' },
+    { id: 'relativity', name: '相対性理論' },
   ];
 
   // Sample mechanism data
   const rawMechanisms: Mechanism[] = Array(12).fill(null).map((_, index) => ({
-    id: index + 1,
+    id: `mech-${index + 1}`,
     title: `物理メカニズム ${index + 1}`,
     description: '物理現象の可視化とシミュレーション',
     likes: Math.floor(Math.random() * 200),
     comments: Math.floor(Math.random() * 50),
     views: Math.floor(Math.random() * 1000),
     createdAt: new Date(2024, 0, index + 1).toISOString(),
-    categories: [Math.floor(Math.random() * 6) + 1],
-    reliabilityLevel: reliabilityLevels[Math.floor(Math.random() * reliabilityLevels.length)]
+    categories: [categories[Math.floor(Math.random() * categories.length)].id],
+    file_url: `/files/mechanism-${index + 1}.pdf`,
+    thumbnail_url: `/thumbnails/mechanism-${index + 1}.jpg`,
+    duration: Math.floor(Math.random() * 300),
+    is_published: true
   }));
 
   // Sort options
@@ -92,11 +81,6 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
       );
     }
 
-    if (selectedReliabilityLevels.length > 0) {
-      result = result.filter(mechanism =>
-        selectedReliabilityLevels.includes(mechanism.reliabilityLevel)
-      );
-    }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -235,29 +219,6 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
           ))}
         </div>
 
-        {/* 信頼性レベルフィルター */}
-        <div className="flex flex-wrap gap-2">
-          {reliabilityLevels.map(level => (
-            <button
-              key={level}
-              onClick={() => {
-                setSelectedReliabilityLevels(prev =>
-                  prev.includes(level)
-                    ? prev.filter(l => l !== level)
-                    : [...prev, level]
-                );
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                selectedReliabilityLevels.includes(level)
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {level}
-            </button>
-          ))}
-        </div>
           <div className="flex items-center space-x-2">
             <ArrowUpDown className="h-5 w-5 text-gray-500" />
             <select
@@ -289,19 +250,8 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
                   alt="メカニズムのプレビュー" 
                   className="w-full h-48 object-cover"
                 />
-                <div className="absolute top-2 right-2 px-2 py-1 rounded-md text-sm" style={{
-                  backgroundColor: mechanism.reliabilityLevel === '妄想モデル' ? '#F3F4F6' :
-                                 mechanism.reliabilityLevel === '実験により一部支持' ? '#DBEAFE' :
-                                 mechanism.reliabilityLevel === '社内複数人が支持' ? '#D1FAE5' :
-                                 mechanism.reliabilityLevel === '顧客含めて定番認識化' ? '#F3E8FF' :
-                                 '#FEF3C7',
-                  color: mechanism.reliabilityLevel === '妄想モデル' ? '#4B5563' :
-                         mechanism.reliabilityLevel === '実験により一部支持' ? '#2563EB' :
-                         mechanism.reliabilityLevel === '社内複数人が支持' ? '#059669' :
-                         mechanism.reliabilityLevel === '顧客含めて定番認識化' ? '#7C3AED' :
-                         '#B45309'
-                }}>
-                  {mechanism.reliabilityLevel}
+                <div className="absolute top-2 right-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm">
+                  {Math.floor(mechanism.duration / 60)}:{(mechanism.duration % 60).toString().padStart(2, '0')}
                 </div>
               </div>
               
@@ -423,23 +373,22 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
         onClose={() => setShowCreateModal(false)}
         onSubmit={async (data) => {
           try {
-            const formData = new FormData();
-            formData.append('title', data.title);
-            formData.append('description', data.description);
-            data.categories.forEach(categoryId => {
-              formData.append('categories[]', categoryId.toString());
-            });
-            formData.append('reliabilityLevel', data.reliabilityLevel);
-            if (data.file) formData.append('file', data.file);
-            if (data.thumbnail) formData.append('thumbnail', data.thumbnail);
-
             const token = localStorage.getItem('token');
-            const response = await fetch('https://api.physmech.com/v1/mechanisms', {
+            const response = await fetch('/api/v1/mechanisms', {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
               },
-              body: formData
+              body: JSON.stringify({
+                title: data.title,
+                description: data.description,
+                categories: data.categories,
+                file_url: data.file_url,
+                thumbnail_url: data.thumbnail_url,
+                duration: data.duration,
+                is_published: data.is_published
+              })
             });
 
             if (!response.ok) {
@@ -454,7 +403,6 @@ const MechanismPlatform: React.FC<MechanismPlatformProps> = ({ onNavigateToProfi
           }
         }}
         categories={categories}
-        reliabilityLevels={reliabilityLevels}
       />
     </div>
   );

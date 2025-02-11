@@ -5,31 +5,33 @@ interface CreateMechanismModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: MechanismFormData) => Promise<void>;
-  categories: { id: number; name: string }[];
-  reliabilityLevels: string[];
+  categories: { id: string; name: string }[];
 }
 
 interface MechanismFormData {
   title: string;
   description: string;
-  categories: number[];
-  reliabilityLevel: string;
+  categories: string[];
   file?: File;
   thumbnail?: File;
+  file_url?: string;
+  thumbnail_url?: string;
+  duration: number;
+  is_published: boolean;
 }
 
 const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  categories,
-  reliabilityLevels
+  categories
 }) => {
   const [formData, setFormData] = useState<MechanismFormData>({
     title: '',
     description: '',
     categories: [],
-    reliabilityLevel: reliabilityLevels[0],
+    duration: 0,
+    is_published: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,17 +46,39 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
     }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0]
-      }));
+      try {
+        const file = files[0];
+        // ファイルをアップロードし、URLを取得
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error('ファイルのアップロードに失敗しました');
+        }
+        
+        const { url, duration } = await response.json();
+        
+        setFormData(prev => ({
+          ...prev,
+          [name]: file,
+          [`${name}_url`]: url,
+          ...(name === 'file' ? { duration } : {})
+        }));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'ファイルのアップロードに失敗しました');
+      }
     }
   };
 
-  const handleCategoryChange = (categoryId: number) => {
+  const handleCategoryChange = (categoryId: string) => {
     setFormData(prev => ({
       ...prev,
       categories: prev.categories.includes(categoryId)
@@ -67,8 +91,8 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
     e.preventDefault();
     setError(null);
 
-    if (!formData.title || !formData.description || formData.categories.length === 0) {
-      setError('必須項目を入力してください');
+    if (!formData.title || !formData.description || formData.categories.length === 0 || !formData.file_url || !formData.thumbnail_url) {
+      setError('必須項目を入力してください（タイトル、説明、カテゴリー、メカニズムファイル、サムネイル画像）');
       return;
     }
 
@@ -151,23 +175,25 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="reliabilityLevel">
-              信頼性レベル
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="is_published">
+              公開状態
             </label>
-            <select
-              id="reliabilityLevel"
-              name="reliabilityLevel"
-              value={formData.reliabilityLevel}
-              onChange={handleChange}
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              required
-            >
-              {reliabilityLevels.map(level => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center">
+              <input
+                id="is_published"
+                name="is_published"
+                type="checkbox"
+                checked={formData.is_published}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  is_published: e.target.checked
+                }))}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="is_published" className="ml-2 block text-sm text-gray-900">
+                公開する
+              </label>
+            </div>
           </div>
 
           <div className="mb-4">
