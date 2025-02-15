@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Tag, Plus, X } from 'lucide-react';
 
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface StatsData {
+  day: string;
+  views: number;
+  likes: number;
+  downloads: number;
+}
+
 const UserProfile = () => {
-  const [interests, setInterests] = useState(['量子コンピュータ', '流体力学', '熱力学']);
+  const [interests, setInterests] = useState<string[]>(['量子コンピュータ', '流体力学', '熱力学']);
   const [newInterest, setNewInterest] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([1, 4]);
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([1, 4]);
 
   // サンプルの統計データ
-  const statsData = Array(30).fill(null).map((_, i) => ({
+  const statsData: StatsData[] = Array(30).fill(null).map((_, i) => ({
     day: `${i + 1}日`,
     views: Math.floor(Math.random() * 500) + 100,
     likes: Math.floor(Math.random() * 100) + 10,
     downloads: Math.floor(Math.random() * 50) + 5,
   }));
 
-  const categories = [
+  const categories: Category[] = [
     { id: 1, name: '力学' },
     { id: 2, name: '電磁気学' },
     { id: 3, name: '熱力学' },
@@ -24,7 +36,7 @@ const UserProfile = () => {
     { id: 6, name: '相対性理論' },
   ];
 
-  const toggleCategory = (categoryId) => {
+  const toggleCategory = (categoryId: number) => {
     setSelectedCategories(prev => 
       prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
@@ -32,7 +44,7 @@ const UserProfile = () => {
     );
   };
 
-  const addInterest = (e) => {
+  const addInterest = (e: FormEvent) => {
     e.preventDefault();
     if (newInterest.trim() && !interests.includes(newInterest.trim())) {
       setInterests([...interests, newInterest.trim()]);
@@ -40,7 +52,7 @@ const UserProfile = () => {
     }
   };
 
-  const removeInterest = (interest) => {
+  const removeInterest = (interest: string) => {
     setInterests(interests.filter(i => i !== interest));
   };
 

@@ -33,23 +33,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // トークンの有効性チェックと自動ログイン
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const response = await fetch('https://api.physmech.com/v1/auth/verify', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData.data.user);
-          } else {
-            localStorage.removeItem('token');
-          }
+          // 開発環境用のモックレスポンス
+          const mockUser = {
+            id: '1',
+            email: 'test@example.com',
+            username: 'testuser',
+            display_name: 'Test User',
+            roles: ['user']
+          };
+          setUser(mockUser);
         }
       } catch (err) {
         console.error('Auth check failed:', err);
@@ -66,22 +62,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setError(null);
 
-      const response = await fetch('https://api.physmech.com/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'ログインに失敗しました');
-      }
-
-      localStorage.setItem('token', data.data.token);
-      setUser(data.data.user);
+      // 開発環境用のモックログイン
+      const mockUser = {
+        id: '1',
+        email,
+        username: 'testuser',
+        display_name: 'Test User',
+        roles: ['user']
+      };
+      const mockToken = 'mock-jwt-token';
+      localStorage.setItem('token', mockToken);
+      setUser(mockUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予期せぬエラーが発生しました');
       throw err;
@@ -93,21 +84,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      if (token) {
-        await fetch('https://api.physmech.com/v1/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
+      // 開発環境用のモックログアウト
+      localStorage.removeItem('token');
+      setUser(null);
     } catch (err) {
       console.error('Logout failed:', err);
     } finally {
-      localStorage.removeItem('token');
-      setUser(null);
       setLoading(false);
     }
   };
@@ -117,22 +99,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setError(null);
 
-      const response = await fetch('https://api.physmech.com/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password, username, display_name })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || '登録に失敗しました');
-      }
-
-      localStorage.setItem('token', data.data.token);
-      setUser(data.data.user);
+      // 開発環境用のモック登録
+      const mockUser = {
+        id: '1',
+        email,
+        username,
+        display_name,
+        roles: ['user']
+      };
+      const mockToken = 'mock-jwt-token';
+      localStorage.setItem('token', mockToken);
+      setUser(mockUser);
     } catch (err) {
       setError(err instanceof Error ? err.message : '予期せぬエラーが発生しました');
       throw err;
@@ -142,7 +119,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout, register }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        loading, 
+        error, 
+        login, 
+        logout, 
+        register 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
