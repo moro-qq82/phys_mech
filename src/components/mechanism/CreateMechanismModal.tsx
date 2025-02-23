@@ -35,6 +35,8 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newCategory, setNewCategory] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -46,12 +48,15 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
     }));
   };
 
+  const isImageFile = (file: File) => {
+    return file.type.startsWith('image/');
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
       try {
         const file = files[0];
-        // ファイルをアップロードし、URLを取得
         const formData = new FormData();
         formData.append('file', file);
         
@@ -66,12 +71,24 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
         
         const { url, duration } = await response.json();
         
-        setFormData(prev => ({
-          ...prev,
-          [name]: file,
-          [`${name}_url`]: url,
-          ...(name === 'file' ? { duration } : {})
-        }));
+        // メカニズムファイルが画像の場合、サムネイルとしても設定
+        if (name === 'file' && isImageFile(file)) {
+          setFormData(prev => ({
+            ...prev,
+            [name]: file,
+            [`${name}_url`]: url,
+            duration,
+            thumbnail: file,
+            thumbnail_url: url
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            [name]: file,
+            [`${name}_url`]: url,
+            ...(name === 'file' ? { duration } : {})
+          }));
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'ファイルのアップロードに失敗しました');
       }
@@ -91,8 +108,8 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
     e.preventDefault();
     setError(null);
 
-    if (!formData.title || !formData.description || formData.categories.length === 0 || !formData.file_url || !formData.thumbnail_url) {
-      setError('必須項目を入力してください（タイトル、説明、カテゴリー、メカニズムファイル、サムネイル画像）');
+    if (!formData.title || !formData.description || formData.categories.length === 0 || !formData.file_url) {
+      setError('必須項目を入力してください（タイトル、説明、カテゴリー、メカニズムファイル）');
       return;
     }
 
@@ -156,7 +173,7 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
             <label className="block text-gray-700 text-sm font-bold mb-2">
               カテゴリー
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-2">
               {categories.map(category => (
                 <button
                   key={category.id}
@@ -171,6 +188,49 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
                   {category.name}
                 </button>
               ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="新規カテゴリー"
+                className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-1"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (newCategory.trim()) {
+                    try {
+                      setIsAddingCategory(true);
+                      const response = await fetch('/api/categories', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ name: newCategory.trim() }),
+                      });
+
+                      if (!response.ok) {
+                        throw new Error('カテゴリーの作成に失敗しました');
+                      }
+
+                      const newCategoryData = await response.json();
+                      categories.push({ id: newCategoryData.id, name: newCategoryData.name });
+                      handleCategoryChange(newCategoryData.id);
+                      setNewCategory('');
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'カテゴリーの作成に失敗しました');
+                    } finally {
+                      setIsAddingCategory(false);
+                    }
+                  }
+                }}
+                disabled={isAddingCategory}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              >
+                {isAddingCategory ? '追加中...' : '追加'}
+              </button>
             </div>
           </div>
 
@@ -206,13 +266,16 @@ const CreateMechanismModal: React.FC<CreateMechanismModalProps> = ({
               type="file"
               onChange={handleFileChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              accept=".pdf,.doc,.docx,.zip"
+              accept=".pdf,.doc,.docx,.zip,.png,.jpg,.jpeg,.gif"
             />
+            <p className="text-sm text-gray-500 mt-1">
+              ※画像ファイルの場合、自動的にサムネイルとして設定されます
+            </p>
           </div>
 
           <div className="mb-6">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="thumbnail">
-              サムネイル画像
+              サムネイル画像（任意）
             </label>
             <input
               id="thumbnail"
