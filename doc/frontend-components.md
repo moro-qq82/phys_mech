@@ -119,11 +119,11 @@ const MechanismCard: React.FC<MechanismCardProps> = ({
   liked
 }) => {
   const reliabilityColorMap = {
-    '妄想モデル': 'bg-gray-100 text-gray-600',
-    '実験により一部支持': 'bg-blue-100 text-blue-600',
+    '妄想モデル': 'bg-purple-100 text-purple-600',
+    '実験により一部支持': 'bg-yellow-100 text-yellow-600',
     '社内複数人が支持': 'bg-green-100 text-green-600',
-    '顧客含めて定番認識化': 'bg-purple-100 text-purple-600',
-    '教科書に記載': 'bg-yellow-100 text-yellow-600'
+    '顧客含めて定番認識化': 'bg-blue-100 text-blue-600',
+    '教科書に記載': 'bg-black-100 text-black-600'
   };
 
   return (
@@ -324,11 +324,11 @@ const commonStyles = {
 
   // 信頼性レベルバッジ
   reliabilityBadge: {
-    '妄想モデル': 'bg-gray-100 text-gray-600',
-    '実験により一部支持': 'bg-blue-100 text-blue-600',
+    '妄想モデル': 'bg-purple-100 text-purple-600',
+    '実験により一部支持': 'bg-yellow-100 text-yellow-600',
     '社内複数人が支持': 'bg-green-100 text-green-600',
-    '顧客含めて定番認識化': 'bg-purple-100 text-purple-600',
-    '教科書に記載': 'bg-yellow-100 text-yellow-600'
+    '顧客含めて定番認識化': 'bg-blue-100 text-blue-600',
+    '教科書に記載': 'bg-black-100 text-black-600'
   }
 };
 ```

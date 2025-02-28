@@ -5,7 +5,10 @@ describe('Mechanism Model', () => {
   const validMechanismData = {
     title: 'テスト機構',
     description: 'これはテスト用の機構です。',
-    userId: 1,
+    user_id: '123e4567-e89b-12d3-a456-426614174000', // UUIDフォーマットに変更
+    file_url: 'https://example.com/mechanism.glb',
+    duration: 30,
+    is_published: false,
   };
 
   describe('作成', () => {
@@ -15,9 +18,9 @@ describe('Mechanism Model', () => {
       expect(mechanism.id).toBeDefined();
       expect(mechanism.title).toBe(validMechanismData.title);
       expect(mechanism.description).toBe(validMechanismData.description);
-      expect(mechanism.userId).toBe(validMechanismData.userId);
-      expect(mechanism.createdAt).toBeDefined();
-      expect(mechanism.updatedAt).toBeDefined();
+      expect(mechanism.user_id).toBe(validMechanismData.user_id);
+      expect(mechanism.created_at).toBeDefined();
+      expect(mechanism.updated_at).toBeDefined();
     });
 
     it('タイトルが空の場合はエラーになる', async () => {
@@ -47,7 +50,7 @@ describe('Mechanism Model', () => {
     });
 
     it('存在しないIDの場合はnullを返す', async () => {
-      const found = await Mechanism.findByPk(999);
+      const found = await Mechanism.findByPk('00000000-0000-0000-0000-000000000000');
       expect(found).toBeNull();
     });
   });
