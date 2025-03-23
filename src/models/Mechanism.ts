@@ -30,6 +30,17 @@ class Mechanism extends Model<MechanismAttributes, MechanismCreationAttributes> 
   public created_at!: Date;
   public updated_at!: Date;
 
+  // Sequelizeによって自動生成されるメソッド
+  public setCategories!: (categories: string[] | any[]) => Promise<any>;
+  public getCategories!: () => Promise<any[]>;
+  public addCategory!: (category: any) => Promise<any>;
+  public addCategories!: (categories: any[]) => Promise<any>;
+  public removeCategory!: (category: any) => Promise<any>;
+  public removeCategories!: (categories: any[]) => Promise<any>;
+  public hasCategory!: (category: any) => Promise<boolean>;
+  public hasCategories!: (categories: any[]) => Promise<boolean>;
+  public countCategories!: () => Promise<number>;
+
   // アソシエーション
   public static associate() {
     const Category = require('./Category').default;

@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { sequelize } from './config/database';
 import categoryRoutes from './routes/categories';
+import uploadRoutes from './routes/uploads';
+import mechanismRoutes from './routes/mechanisms';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -10,8 +13,13 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// 静的ファイルの提供
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+
 // ルートの登録
 app.use('/api/categories', categoryRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/mechanisms', mechanismRoutes);
 
 // データベース接続とサーバー起動
 const startServer = async () => {
