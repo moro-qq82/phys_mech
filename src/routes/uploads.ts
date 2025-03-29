@@ -33,7 +33,8 @@ const fileFilter = (req: express.Request, file: Express.Multer.File, cb: multer.
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/zip'
+    'application/zip',
+    'text/plain'
   ];
 
   if (allowedFileTypes.includes(file.mimetype)) {

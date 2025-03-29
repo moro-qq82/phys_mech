@@ -21,6 +21,11 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/mechanisms', mechanismRoutes);
 
+// ルートパスのハンドラー
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'API Server is running' });
+});
+
 // データベース接続とサーバー起動
 const startServer = async () => {
   try {
