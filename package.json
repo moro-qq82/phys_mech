@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "react-scripts start",
-    "server": "ts-node -P tsconfig.server.json src/server.ts",
+    "server": "ts-node -P tsconfig.server.json src/backend/server.ts",
     "build": "react-scripts build",
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand",

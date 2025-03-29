@@ -17,11 +17,11 @@
     }
   },
   "include": [
-    "src/**/*.ts"
+    "src/backend/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    "src/**/*.test.ts",
+    "src/backend/**/*.test.ts",
     "src/**/*.tsx"
   ]
 }

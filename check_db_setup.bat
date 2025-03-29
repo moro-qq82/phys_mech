@@ -85,7 +85,7 @@ if %errorlevel% equ 0 (
 ) else (
   echo [WARNING] API server may not be running.
   echo To start the server, run the following command:
-  echo npm run dev
+  echo npm run server
 )
 echo.
 
